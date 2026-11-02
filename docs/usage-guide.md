@@ -19,7 +19,7 @@
 
 Python 运行成功不是完成条件。PNG 视觉检查通过后才可以进入最终交付。
 
-当前 Skill 版本为 1.4，示例适用于 pptx-designer 1.0.0b10。仓库维护 6 个案例，
+当前 Skill 版本为 1.5，示例适用于 pptx-designer 1.0.0b10。仓库维护 6 个案例，
 其中 5 个作为正式设计 benchmark，另 1 个保留为非 benchmark 案例，覆盖技术架构、
 科学叙事、建筑文化、城市策略和高定美妆编辑。案例库见
 [examples/README.md](../examples/README.md)，在线预览与下载见
