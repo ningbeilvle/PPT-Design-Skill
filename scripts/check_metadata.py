@@ -23,6 +23,7 @@ VERSION_REFERENCES = [
     ("README.md", "version-{version}-"),
     ("README.md", 'Version {version}"'),
     ("docs/usage-guide.md", "当前 Skill 版本为 {version}"),
+    ("skill/scripts/init_presentation_task.py", 'SKILL_VERSION = "{version}"'),
 ]
 
 

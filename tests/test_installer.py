@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+import contextlib
+import io
+import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
-from installer.install import SOURCE, copy_bundle, installed_package_version
+from installer.install import ROOT, SOURCE, check, copy_bundle, installed_package_version, skill_version
 
 
 class InstallerBundleTests(unittest.TestCase):
@@ -42,6 +46,28 @@ class InstallerBundleTests(unittest.TestCase):
 
             self.assertFalse(copy_bundle(destination, force=False))
             self.assertEqual(marker.read_text(encoding="utf-8"), "keep")
+
+
+class InstallerCheckTests(unittest.TestCase):
+    def test_missing_render_dependencies_only_fail_strict_check(self) -> None:
+        missing = {"libreoffice": False, "poppler": False}
+        with patch("installer.install.render_dependency_status", return_value=missing):
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                self.assertEqual(check(require_render=False), 0)
+            self.assertIn("advisory", output.getvalue())
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(check(require_render=True), 1)
+
+    def test_present_render_dependencies_pass_strict_check(self) -> None:
+        present = {"libreoffice": True, "poppler": True}
+        with patch("installer.install.render_dependency_status", return_value=present):
+            with contextlib.redirect_stdout(io.StringIO()):
+                self.assertEqual(check(), 0)
+
+    def test_skill_version_matches_manifest(self) -> None:
+        manifest = json.loads((ROOT / "skill.json").read_text(encoding="utf-8"))
+        self.assertEqual(skill_version(), manifest["version"])
 
 
 if __name__ == "__main__":

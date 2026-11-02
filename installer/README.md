@@ -57,3 +57,7 @@ python installer/install.py --render-deps
 ```powershell
 python installer/install.py --check
 ```
+
+`--check` 会在缺少 LibreOffice 或 Poppler 时返回非零退出码，因为 PNG 审阅
+依赖这两个渲染工具。无渲染器的 CI 或容器环境可以改用
+`--check --allow-missing-render`：此时只报告缺失项，Python 软件包仍然必须齐备。

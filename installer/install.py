@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import importlib.util
 from importlib.metadata import PackageNotFoundError, version as package_version
+import json
 import platform as host_platform
 import shutil
 import subprocess
@@ -17,9 +18,17 @@ except ModuleNotFoundError:  # direct execution: python installer/install.py
     from platforms import PLATFORMS, global_path, normalize, project_path
 
 SKILL_NAME = "ppt-design-skill"
-SKILL_VERSION = "1.4"
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "skill"
+
+
+def skill_version() -> str:
+    """Read the release version from skill.json so the two cannot drift apart."""
+    try:
+        manifest = json.loads((ROOT / "skill.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return "unknown"
+    return str(manifest.get("version") or "unknown")
 
 
 def copy_bundle(destination: Path, force: bool) -> bool:
@@ -96,7 +105,7 @@ def install_render_deps() -> None:
         subprocess.run([winget, "install", "--id", package_id, "--exact", "--accept-source-agreements", "--accept-package-agreements"], check=False)
 
 
-def check() -> int:
+def check(require_render: bool = True) -> int:
     package_ok = True
     print("Python packages:")
     for module, label, distribution in (
@@ -110,10 +119,16 @@ def check() -> int:
         suffix = f" {installed}" if installed else ""
         print(f"  {'OK' if found else 'MISSING'} {label}{suffix}")
     print("Render dependencies:")
+    render_ok = True
     for name, available in render_dependency_status().items():
-        package_ok = package_ok and available
+        render_ok = render_ok and available
         print(f"  {'OK' if available else 'MISSING'} {name}")
-    return 0 if package_ok else 1
+    if not render_ok and not require_render:
+        # Headless CI cannot run the PNG review gate, so it passes
+        # --allow-missing-render. Python packages stay mandatory either way.
+        print("[WARN] render dependencies are advisory here; PNG review needs LibreOffice and Poppler")
+        render_ok = True
+    return 0 if package_ok and render_ok else 1
 
 
 def selected_platforms(name: str | None) -> list[str]:
@@ -138,9 +153,14 @@ def main() -> int:
     parser.add_argument("--ai-images", action="store_true")
     parser.add_argument("--render-deps", action="store_true")
     parser.add_argument("--check", "-c", action="store_true")
+    parser.add_argument(
+        "--allow-missing-render",
+        action="store_true",
+        help="With --check, report missing LibreOffice/Poppler without failing (headless CI)",
+    )
     args = parser.parse_args()
     if args.check:
-        return check()
+        return check(require_render=not args.allow_missing_render)
 
     keys = selected_platforms("all" if args.all else args.platform)
     installed = []
@@ -159,7 +179,7 @@ def main() -> int:
         print("[WARN] pip installation failed")
     if args.render_deps:
         install_render_deps()
-    print(f"Installed {SKILL_NAME} {SKILL_VERSION}: {len(installed)} skill bundle(s). Restart the coding assistant to reload skills.")
+    print(f"Installed {SKILL_NAME} {skill_version()}: {len(installed)} skill bundle(s). Restart the coding assistant to reload skills.")
     return 0
 
 
